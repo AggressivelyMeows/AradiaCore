@@ -4,6 +4,7 @@ import psutil
 import discord
 import asyncio
 import logging
+from functools import wraps
 
 from attrdict import AttrDict
 class colours():
@@ -28,9 +29,23 @@ class aradiaCore(discord.Client):
             self.prefix = '!'
         try: self.autoDelete = self.config['autoRemove']
         except KeyError: self.autoDelete = False
+        try: self.uploadChannel = self.config['uploadChannel']
+        except KeyError: self.uploadChannel = None
+        else:
+            if self.uploadChannel:
+                try:
+                    int(self.uploadChannel)
+                except ValueError:
+                    raise ValueError('Upload channel must be a ID')
         super().__init__()
+
+    #utils
     def debug(self,string):
-         print(colours.WARNING + string + colours.ENDC)
+        """
+        Allows you to log special stuff to the console as well as to the log.
+        """
+        print(colours.WARNING + string + colours.ENDC)
+    
     async def upload(self,image):
         """
         Uploads to a defined channel
@@ -39,10 +54,10 @@ class aradiaCore(discord.Client):
         dest = self.config['uploadChannel']
         if not dest:
             raise EnvironmentError('Channel ID not selected. Please enter a upload channel id in config.json')
-        channel = discord.utils.get(bot.get_all_channels(),id='307615051689361408')
+        channel = discord.utils.get(bot.get_all_channels(),id=self.uploadChannel)
         msg = await self.send_file(channel,image)
         return msg.attachments[0]['url']
-
+    #Json related functions
     def save_json(self, filename, data):
         """Atomically saves json file - Will make directory if need be."""
         mypath = r'{}'.format(filename)
@@ -92,6 +107,7 @@ class aradiaCore(discord.Client):
             json.dump(data, f, indent=4,sort_keys=True,
                 separators=(',',' : '))
         return data
+    #Normal functions
     async def _wait_delete_msg(self, message, after):
         await asyncio.sleep(after)
         await self.delete_message(message)
@@ -212,7 +228,19 @@ class aradiaCore(discord.Client):
         try:
             self.run(config['token'])
         except discord.errors.LoginFailure:
-            raise discord.errors.LoginFailure('Incorrect token. Please check ./config.json and make sure the "token" entry is correct. If you are still having issues, please go to the github wiki or join our server at: https://discord.gg/Sz2qQJt')
+            print(colours.WARNING + 'Incorrect token.\nPlease check ./config.json and make sure the "token" entry is correct.\nIf you are still having issues, please go to the github wiki or join our server at:\nhttps://discord.gg/Sz2qQJt' + colours.ENDC)
+    #Permission related wrappers
+    def bot_owner(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            async def error(error,*,user=None):
+                print('Error: {} attempted bot owner command.'.format(user if user is not None else 'User'))
+                return error
+            ctx = args[1]
+            if ctx.author.id != args[0].config['owner']:
+                return error('This command is locked to the bot owner only.',user=ctx.author.name)
+            return f(*args,**kwargs)
+        return wrapper
 
 if __name__ == '__main__':
     print('This framework is designed to be run inside another script. Try importing.')
