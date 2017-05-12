@@ -1,15 +1,36 @@
+import os
 import json
 import psutil
 import discord
 import asyncio
 import logging
-from attrdict import AttrDict
 
+from attrdict import AttrDict
+class colours():
+    """
+    To use - print(colours.HEADER + 'boop' + colours.ENDC)
+    """
+    HEADER = '\033[95m' # Pink
+    OKBLUE = '\033[94m' # Blue
+    OKGREEN = '\033[92m' # Green!
+    WARNING = '\033[93m' # Red
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 class aradiaCore(discord.Client):
-    def __init__(self,*,prefix='!',autoDeleteResponse=True):
-        self.prefix = prefix
-        self.autoDelete = autoDeleteResponse
+    def __init__(self):
+        self._messages = []
+        self.config = self.load_json('config.json')
+        try: self.prefix = self.config['prefix'] 
+        except KeyError: 
+            print('No prefix found... using "!"')
+            self.prefix = '!'
+        try: self.autoDelete = self.config['autoRemove']
+        except KeyError: self.autoDelete = False
         super().__init__()
+    def debug(self,string):
+         print(colours.WARNING + string + colours.ENDC)
     async def upload(self,image):
         """
         Uploads to a defined channel
@@ -113,7 +134,8 @@ class aradiaCore(discord.Client):
         toreturn += 'Total servers: {}\n'.format(len(self.servers))
         toreturn += 'Total channels: {}\n'.format(len([x for x in self.get_all_channels()]))
         toreturn += '------------\n'
-        toreturn += 'Running AradiaCore Version 0.5 - Public Alpha'
+        toreturn += 'Prefix: {}\n'.format(self.config['prefix'])
+        toreturn += 'Running AradiaCore Version 0.7 - Public Alpha'
         print(toreturn)
     async def on_message(self,msg):
         if msg.author == self.user:
@@ -145,7 +167,7 @@ class aradiaCore(discord.Client):
     
 
         try:
-            res = await handler(msg)
+            res = await handler(self.context)
         except discord.errors.Forbidden:
             #If we cant talk, show message in console.
             print('[Error] Forbidden to talk in channel {}({}/{}({}))'.format(msg.channel.id,msg.channel.name,msg.server.name,msg.server.id))
@@ -162,14 +184,24 @@ class aradiaCore(discord.Client):
                     sent = await self.send_message(msg.channel,res)
             except discord.errors.Forbidden:
                 sent = await self.send_message(msg.author,'I do not have permissions to run {} in {}({})'.format(handler.__name__[4:],msg.server.name,msg.channel.name))
-        else:
-            debug('{} Returned NoneType'.format(handler.__name__[4:]))
+        self._messages.append((msg,sent))
         return
-
-    async def on_server_remove(s):
-        debug('Left {}! Current total: {}'.format(s.name,len([x for x in self.servers])))
-    async def on_server_join(s):
-        debug('Joined {}! Current total: {}'.format(s.name,len([x for x in self.servers])))
+    async def on_message_delete(self,msg):
+        if self.autoDelete:
+            if [x for x in self._messages if x[0].id==msg.id]:
+                or_id, sent_id = [x for x in self._messages if x[0].id==msg.id][0]
+                try:
+                    await self.delete_message(sent_id)
+                except discord.errors.NotFound:
+                    pass
+                except discord.errors.Forbidden:
+                    pass
+                del self._messages[self._messages.index((or_id,sent_id))]
+                self.debug('Removed {} from messages list'.format(sent_id.id))
+    async def on_server_remove(self,s):
+        self.debug('Left {}! Current total: {}'.format(s.name,len([x for x in self.servers])))
+    async def on_server_join(self,s):
+        self.debug('Joined {}! Current total: {}'.format(s.name,len([x for x in self.servers])))
     def boot(self):
         print('Booting...')
         try:
@@ -181,3 +213,7 @@ class aradiaCore(discord.Client):
             self.run(config['token'])
         except discord.errors.LoginFailure:
             raise discord.errors.LoginFailure('Incorrect token. Please check ./config.json and make sure the "token" entry is correct. If you are still having issues, please go to the github wiki or join our server at: https://discord.gg/Sz2qQJt')
+
+if __name__ == '__main__':
+    print('This framework is designed to be run inside another script. Try importing.')
+

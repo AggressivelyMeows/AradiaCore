@@ -1,4 +1,6 @@
 {
-    "token":"Bot Token Goes Here",
-    "uploadChannel":""
+    "token":"Bot token goes here! :3",
+    "uploadChannel":"",
+    "prefix":"!",
+    "autoRemove":true
 }
