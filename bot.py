@@ -17,7 +17,7 @@ class Bot(AradiaCore):
 
         return await self.say("Hello, I am AradiaCore!\n**I am a bot framework made by Cerulean#7014 and made in python! Check out my links below!**",embed=em)
 
-    async def cmd_meme(self,context):
+    async def cmd_meme(self, context):
         """
         Quick example command
         """

@@ -1,12 +1,15 @@
 import os
-import json
 import psutil
 import discord
-import asyncio
 import logging
 from random import randint
 from functools import wraps
 from collections import namedtuple
+
+try:
+    import ujson as json
+except ImportError:
+    import json
 
 Context = namedtuple("Context", "msg guild server channel author embed")
 
@@ -148,11 +151,11 @@ class AradiaCore(discord.Client):
         # -Message embeds
 
         self.context = Context(**{'msg': msg,
-                             'guild': msg.guild,
-                             'server': msg.guild,
-                             'channel': msg.channel,
-                             'author': msg.author,
-                             'embed': msg.embeds})
+                                  'guild': msg.guild,
+                                  'server': msg.guild,
+                                  'channel': msg.channel,
+                                  'author': msg.author,
+                                  'embed': msg.embeds})
 
         try:
             res = await handler(self.context)
@@ -215,10 +218,11 @@ class AradiaCore(discord.Client):
                                     'https://discord.gg/Sz2qQJt' + Colours.ENDC)
 
     # Permission related wrappers
+    @staticmethod
     def bot_owner(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            async def error(error,*,user=None):
+            async def error(error, *, user=None):
                 print('Error: {} attempted bot owner command.'.format(user if user is not None else 'User'))
                 return error
             ctx = args[1]
@@ -240,7 +244,7 @@ class AradiaCore(discord.Client):
             try:
                 cls._read_json(tmp_file)
             except json.decoder.JSONDecodeError:
-                cls.logger.exception("Attempted to write file {} but JSON "
+                logging.exception("Attempted to write file {} but JSON "
                                       "integrity check on tmp file has failed. "
                                       "The original file is unaltered."
                                       "".format(filename))
@@ -286,4 +290,3 @@ class AradiaCore(discord.Client):
 
 if __name__ == '__main__':
     print('This framework is designed to be run inside another script. Try importing.')
-
