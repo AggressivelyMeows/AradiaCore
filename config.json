@@ -1,6 +1,6 @@
 {
     "token":"Bot token goes here",
-    "uploadChannel":"",
+    "uploadchannel":"",
     "prefix":"!",
     "owner":"Your ID here!!",
     "autoRemove":true
