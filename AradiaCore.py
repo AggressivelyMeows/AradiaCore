@@ -76,7 +76,7 @@ class AradiaCore(discord.Client):
         if not dest:
             raise EnvironmentError('guild ID not selected. Please enter a upload guild id in config.json')
 
-        msg = await self.uploadchannel(file=discord.File(image))
+        msg = await self.uploadchannel.send(file=discord.File(image))
         return msg.attachments[0]['url']
 
     async def cmd_stats(self,msg):
