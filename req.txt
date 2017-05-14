@@ -1,4 +1,2 @@
-discord.py
-requests
+-e git+https://github.com/Rapptz/discord.py@rewrite
 psutil
-attrdict
