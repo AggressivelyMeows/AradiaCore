@@ -107,7 +107,7 @@ class AradiaCore(discord.Client):
         message = message if message else ''
 
         if file:
-            msg = await dest.send(file=discord.File(file), content=message, **({"delete_after": expire} if expire else {}))
+            msg = await dest.send(message, file=discord.File(file), **({"delete_after": expire} if expire else {}))
         else:
             msg = await dest.send(message, embed=embed, tts=tts, **({"delete_after": expire} if expire else {}))
 
