@@ -2,6 +2,7 @@ import os
 import psutil
 import discord
 import logging
+import asyncio
 from random import randint
 from functools import wraps
 from collections import namedtuple
@@ -76,7 +77,7 @@ class AradiaCore(discord.Client):
         if not dest:
             raise EnvironmentError('guild ID not selected. Please enter a upload guild id in config.json')
 
-        msg = await self.uploadchannel(file=discord.File(image))
+        msg = await self.send_file(self.uploadchannel, fp=image)
         return msg.attachments[0]['url']
 
     async def cmd_stats(self,msg):
@@ -107,11 +108,18 @@ class AradiaCore(discord.Client):
         message = message if message else ''
 
         if file:
-            msg = await dest.send(file=discord.File(file), content=message, **({"delete_after": expire} if expire else {}))
+            msg = await self.send_file(dest, fp=file, content=message)
         else:
-            msg = await dest.send(message, embed=embed, tts=tts, **({"delete_after": expire} if expire else {}))
+            msg = await self.send_message(dest, message, embed=embed, tts=tts)
+
+        if expire:
+            asyncio.ensure_future(self.del_after(expire, msg))
 
         return msg
+
+    async def del_after(self, time, message):
+        await asyncio.sleep(time)
+        await self.delete_message(message)
 
     async def on_ready(self):
         toreturn = '{}\n'.format(self.user.name)
@@ -165,7 +173,7 @@ class AradiaCore(discord.Client):
             print('[Error] Forbidden to talk in guild {}({}/{}({}))'.format(msg.guild.id, msg.guild.name, msg.server.name, msg.server.id))
             try:
                 # PM user, if we cant, just ignore.
-                await msg.author.send('I cannot send a message in {}'.format(msg.guild.name))
+                await self.send_message(msg.author, 'I cannot send a message in {}'.format(msg.guild.name))
             except discord.errors.Forbidden:
                 print('Couldnt send forbidden message ;-; ')
 
@@ -175,9 +183,9 @@ class AradiaCore(discord.Client):
                 if not isinstance(res, str):
                     sent = res
                 else:
-                    sent = await msg.channel.send(res)
+                    sent = await self.send_message(msg.channel, res)
             except discord.errors.Forbidden:
-                sent = await msg.author.send('I do not have permissions to run {} in {}({})'.format(handler.__name__[4:], msg.server.name,msg.guild.name))
+                sent = await self.send_message(msg.author, 'I do not have permissions to run {} in {}({})'.format(handler.__name__[4:], msg.server.name,msg.guild.name))
 
         self._messages.append((msg, sent))
         return
@@ -188,7 +196,7 @@ class AradiaCore(discord.Client):
             if chmsg:
                 orig, sent = chmsg[0]
                 try:
-                    await sent.delete()
+                    await self.delete_message(sent)
                 except discord.errors.NotFound:
                     pass
                 except discord.errors.Forbidden:

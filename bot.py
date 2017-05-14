@@ -23,7 +23,7 @@ class Bot(AradiaCore):
         """
         em = discord.Embed(title='Memes')
         em.add_field(name=context.server.name,value=context.author.name)
-        return await self.say('',embed=em)
+        return await self.say('', embed=em)
 
 if __name__ == '__main__':
     aradiabot = Bot()
