@@ -106,6 +106,7 @@ class AradiaCore(discord.Client):
 
         message = message if message else ''
 
+        msg = await dest.send(message, file=None or discord.File(file), delete_after=None or expire)
 
         return msg
 
