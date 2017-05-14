@@ -2,6 +2,7 @@ import os
 import psutil
 import discord
 import logging
+import asyncio
 from random import randint
 from functools import wraps
 from collections import namedtuple
@@ -12,6 +13,7 @@ except ImportError:
     import json
 
 Context = namedtuple("Context", "msg guild server channel author embed")
+
 
 class Colours:
     """
@@ -27,6 +29,7 @@ class Colours:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+
 Colors = Colours
 
 
@@ -37,7 +40,7 @@ class AradiaCore(discord.Client):
         self.config = self.json.load_json('config.json')
         try:
             self.prefix = self.config['prefix']
-        except KeyError: 
+        except KeyError:
             print('No prefix found... using "!"')
             self.prefix = '!'
         try:
@@ -55,7 +58,8 @@ class AradiaCore(discord.Client):
 
         self.logger = logging.getLogger('discord')  # Discord Logging
         self.logger.setLevel(logging.INFO)
-        self.handler = logging.FileHandler(filename=os.path.join('resources', 'discord.log'), encoding='utf-8', mode='w')
+        self.handler = logging.FileHandler(filename=os.path.join('resources', 'discord.log'), encoding='utf-8',
+                                           mode='w')
         self.handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
         self.logger.addHandler(self.handler)
 
@@ -66,7 +70,7 @@ class AradiaCore(discord.Client):
         Allows you to log special stuff to the console as well as to the log.
         """
         print(Colours.WARNING + string + Colours.ENDC)
-    
+
     async def upload(self, image):
         """
         Uploads to a defined guild
@@ -76,10 +80,10 @@ class AradiaCore(discord.Client):
         if not dest:
             raise EnvironmentError('guild ID not selected. Please enter a upload guild id in config.json')
 
-        msg = await self.uploadchannel.send(file=discord.File(image))
+        msg = await self.send_file(self.uploadchannel, fp=image)
         return msg.attachments[0]['url']
 
-    async def cmd_stats(self,msg):
+    async def cmd_stats(self, msg):
         """
         Inbuilt command,
         Shows you stats of your bot.
@@ -91,10 +95,10 @@ class AradiaCore(discord.Client):
         toreturn += '------------\n'
         process = psutil.Process(os.getpid())
         mem = process.memory_info().rss
-        mem = float(mem)/1048576
+        mem = float(mem) / 1048576
         cpu = str(psutil.cpu_percent(interval=None)) + '%'
         toreturn += ':floppy_disk: | Memory usage: {}MB\n'.format(str(mem))
-        toreturn += ':diamond_shape_with_a_dot_inside: | CPU usage: ' + cpu +'\n'
+        toreturn += ':diamond_shape_with_a_dot_inside: | CPU usage: ' + cpu + '\n'
         return toreturn
 
     async def say(self, message, *, file=None, embed=None, tts=None, expire=0, dest=None):
@@ -106,9 +110,19 @@ class AradiaCore(discord.Client):
 
         message = message if message else ''
 
-        msg = await dest.send(message, file=None or discord.File(file), delete_after=None or expire)
+        if file:
+            msg = await self.send_file(dest, fp=file, content=message)
+        else:
+            msg = await self.send_message(dest, message, embed=embed, tts=tts)
+
+        if expire:
+            asyncio.ensure_future(self.del_after(expire, msg))
 
         return msg
+
+    async def del_after(self, time, message):
+        await asyncio.sleep(time)
+        await self.delete_message(message)
 
     async def on_ready(self):
         toreturn = '{}\n'.format(self.user.name)
@@ -159,10 +173,12 @@ class AradiaCore(discord.Client):
 
         except discord.errors.Forbidden:
             # If we cant talk, show message in console.
-            print('[Error] Forbidden to talk in guild {}({}/{}({}))'.format(msg.guild.id, msg.guild.name, msg.server.name, msg.server.id))
+            print(
+                '[Error] Forbidden to talk in guild {}({}/{}({}))'.format(msg.guild.id, msg.guild.name, msg.server.name,
+                                                                          msg.server.id))
             try:
                 # PM user, if we cant, just ignore.
-                await msg.author.send('I cannot send a message in {}'.format(msg.guild.name))
+                await self.send_message(msg.author, 'I cannot send a message in {}'.format(msg.guild.name))
             except discord.errors.Forbidden:
                 print('Couldnt send forbidden message ;-; ')
 
@@ -172,9 +188,10 @@ class AradiaCore(discord.Client):
                 if not isinstance(res, str):
                     sent = res
                 else:
-                    sent = await msg.channel.send(res)
+                    sent = await self.send_message(msg.channel, res)
             except discord.errors.Forbidden:
-                sent = await msg.author.send('I do not have permissions to run {} in {}({})'.format(handler.__name__[4:], msg.server.name,msg.guild.name))
+                sent = await self.send_message(msg.author, 'I do not have permissions to run {} in {}({})'.format(
+                    handler.__name__[4:], msg.server.name, msg.guild.name))
 
         self._messages.append((msg, sent))
         return
@@ -185,7 +202,7 @@ class AradiaCore(discord.Client):
             if chmsg:
                 orig, sent = chmsg[0]
                 try:
-                    await sent.delete()
+                    await self.delete_message(sent)
                 except discord.errors.NotFound:
                     pass
                 except discord.errors.Forbidden:
@@ -222,10 +239,12 @@ class AradiaCore(discord.Client):
             async def error(error, *, user=None):
                 print('Error: {} attempted bot owner command.'.format(user if user is not None else 'User'))
                 return error
+
             ctx = args[1]
             if ctx.author.id != args[0].config['owner']:
                 return error('This command is locked to the bot owner only.', user=ctx.author.name)
             return f(*args, **kwargs)
+
         return wrapper
 
     class json:
@@ -242,9 +261,9 @@ class AradiaCore(discord.Client):
                 cls._read_json(tmp_file)
             except json.decoder.JSONDecodeError:
                 logging.exception("Attempted to write file {} but JSON "
-                                      "integrity check on tmp file has failed. "
-                                      "The original file is unaltered."
-                                      "".format(filename))
+                                  "integrity check on tmp file has failed. "
+                                  "The original file is unaltered."
+                                  "".format(filename))
                 return False
             os.replace(tmp_file, filename)
             return True
