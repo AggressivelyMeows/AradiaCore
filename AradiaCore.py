@@ -153,7 +153,7 @@ class AradiaCore(discord.Client):
         # Global Context
         # Holds info on current event.
         # Holds: Current message
-        # -Message server
+        # -Message guild
         # -Message guild
         # -Message author
         # -Message embeds
@@ -170,7 +170,7 @@ class AradiaCore(discord.Client):
 
         except discord.errors.Forbidden:
             # If we cant talk, show message in console.
-            print('[Error] Forbidden to talk in guild {}({}/{}({}))'.format(msg.guild.id, msg.guild.name, msg.server.name, msg.server.id))
+            print('[Error] Forbidden to talk in guild {}({}/{}({}))'.format(msg.guild.id, msg.guild.name, msg.guild.name, msg.guild.id))
             try:
                 # PM user, if we cant, just ignore.
                 await self.send_message(msg.author, 'I cannot send a message in {}'.format(msg.guild.name))
@@ -185,7 +185,7 @@ class AradiaCore(discord.Client):
                 else:
                     sent = await self.send_message(msg.channel, res)
             except discord.errors.Forbidden:
-                sent = await self.send_message(msg.author, 'I do not have permissions to run {} in {}({})'.format(handler.__name__[4:], msg.server.name,msg.guild.name))
+                sent = await self.send_message(msg.author, 'I do not have permissions to run {} in {}({})'.format(handler.__name__[4:], msg.guild.name,msg.guild.name))
 
         self._messages.append((msg, sent))
         return
@@ -204,10 +204,10 @@ class AradiaCore(discord.Client):
                 del self._messages[self._messages.index(chmsg[0])]
                 self.debug('Removed {} from messages list'.format(sent.id))
 
-    async def on_server_remove(self, s):
+    async def on_guild_remove(self, s):
         self.debug('Left {}! Current total: {}'.format(s.name, len(self.guilds)))
 
-    async def on_server_join(self, s):
+    async def on_guild_join(self, s):
         self.debug('Joined {}! Current total: {}'.format(s.name, len(self.guilds)))
 
     def boot(self):
@@ -222,7 +222,7 @@ class AradiaCore(discord.Client):
         except discord.errors.LoginFailure:
             print(Colours.WARNING + 'Incorrect token.\n'
                                     'Please check ./config.json and make sure the "token" entry is correct.\n'
-                                    'If you are still having issues, please go to the github wiki or join our server at:\n'
+                                    'If you are still having issues, please go to the github wiki or join our guild at:\n'
                                     'https://discord.gg/Sz2qQJt' + Colours.ENDC)
 
     # Permission related wrappers
