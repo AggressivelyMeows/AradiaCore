@@ -1,2 +1,2 @@
-discord.py
+-e git+https://github.com/Rapptz/discord.py@rewrite
 psutil
