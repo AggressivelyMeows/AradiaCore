@@ -58,11 +58,16 @@ class AradiaCore(discord.Client):
 
         self.logger = logging.getLogger('discord')  # Discord Logging
         self.logger.setLevel(logging.INFO)
-        self.handler = logging.FileHandler(filename=os.path.join('resources', 'discord.log'), encoding='utf-8',
+        self.handler = logging.FileHandler(filename=os.path.join('logs', 'discord.log'), encoding='utf-8',
                                            mode='w')
         self.handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
         self.logger.addHandler(self.handler)
-
+        self.internalLogger = logging.getLogger('discord')  # Discord Logging
+        self.internalLogger.setLevel(logging.INFO)
+        self.internalHandler = logging.FileHandler(filename=os.path.join('logs', 'aradiaCore.log'), encoding='utf-8',
+                                           mode='w')
+        self.internalHandler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+        self.internalLogger.addHandler(self.handler)
     # utils
     @staticmethod
     def debug(string):
